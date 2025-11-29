@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePages, Page } from '@/hooks/usePages';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  FileText,
+  FileCode,
   Plus,
   ChevronRight,
   ChevronDown,
@@ -22,7 +20,8 @@ import {
   Settings,
   LogOut,
   Search,
-  Home,
+  ChevronsUpDown,
+  PlusCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -104,14 +103,14 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
         <div
           className={cn(
             'sidebar-item group',
-            isSelected && 'active bg-sidebar-accent'
+            isSelected && 'active'
           )}
           style={{ paddingLeft: `${8 + depth * 12}px` }}
         >
           {hasChildren ? (
             <button
               onClick={() => toggleExpanded(page.id)}
-              className="p-0.5 hover:bg-sidebar-border rounded opacity-60 hover:opacity-100"
+              className="p-0.5 hover:bg-sidebar-border rounded text-muted-foreground hover:text-foreground"
             >
               {isExpanded ? (
                 <ChevronDown className="w-3.5 h-3.5" />
@@ -127,7 +126,11 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
             onClick={() => onSelectPage(page.id)}
             className="flex-1 flex items-center gap-2 text-left truncate"
           >
-            <span className="text-base">{page.icon || '📄'}</span>
+            {page.is_favorite ? (
+              <FileCode className="w-4 h-4 text-accent" />
+            ) : (
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
+            )}
             <span className="truncate">{page.title}</span>
           </button>
 
@@ -139,7 +142,7 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
               <DropdownMenuItem onClick={() => handleToggleFavorite(page)}>
-                <Star className={cn('w-4 h-4 mr-2', page.is_favorite && 'fill-current')} />
+                <Star className={cn('w-4 h-4 mr-2', page.is_favorite && 'fill-current text-warning')} />
                 {page.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -154,7 +157,7 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
         </div>
 
         {hasChildren && isExpanded && (
-          <div className="animate-slide-in-up">
+          <div className="ml-2 border-l border-sidebar-border">
             {children.map((child) => renderPageItem(child, depth + 1))}
           </div>
         )}
@@ -163,19 +166,17 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
   };
 
   return (
-    <div className="w-60 h-screen bg-sidebar flex flex-col border-r border-sidebar-border">
-      {/* User Section */}
-      <div className="p-3">
+    <aside className="w-64 h-screen bg-sidebar flex flex-col border-r border-sidebar-border shrink-0">
+      {/* Workspace Header */}
+      <div className="p-4 flex items-center justify-between group cursor-pointer">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-sidebar-accent transition-colors">
-              <div className="w-6 h-6 rounded bg-gradient-to-br from-accent to-accent/70 flex items-center justify-center text-accent-foreground text-xs font-medium">
-                {user?.email?.[0]?.toUpperCase() || 'U'}
+            <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <div className="w-5 h-5 bg-primary rounded text-primary-foreground flex items-center justify-center text-xs font-bold tracking-tighter">
+                D
               </div>
-              <span className="flex-1 text-left text-sm font-medium truncate">
-                {user?.email?.split('@')[0] || 'User'}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-secondary-foreground text-sm font-medium tracking-tight">DevSpace</span>
+              <ChevronsUpDown className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
@@ -191,45 +192,51 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
         </DropdownMenu>
       </div>
 
-      {/* Quick Actions */}
-      <div className="px-3 space-y-1">
-        <button className="sidebar-item w-full text-muted-foreground hover:text-foreground">
+      {/* Search & Actions */}
+      <div className="px-3 pb-2 space-y-1">
+        <button className="sidebar-item w-full">
           <Search className="w-4 h-4" />
-          <span>Search</span>
+          <span className="flex-1 text-left">Search</span>
+          <span className="kbd-badge">⌘K</span>
         </button>
-        <button className="sidebar-item w-full text-muted-foreground hover:text-foreground">
-          <Home className="w-4 h-4" />
-          <span>Home</span>
+        <button className="sidebar-item w-full" onClick={handleCreatePage}>
+          <PlusCircle className="w-4 h-4" />
+          <span>New Note</span>
         </button>
       </div>
 
-      <Separator className="my-3 bg-sidebar-border" />
-
       {/* Pages List */}
-      <ScrollArea className="flex-1 px-2">
+      <ScrollArea className="flex-1 px-3 py-4">
         {/* Favorites */}
         {favoritePages.length > 0 && (
-          <div className="mb-4">
-            <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <div className="mb-6">
+            <h3 className="px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
               Favorites
-            </div>
-            {favoritePages.map((page) => renderPageItem(page))}
+            </h3>
+            <ul className="space-y-0.5">
+              {favoritePages.map((page) => (
+                <li key={page.id}>
+                  <button
+                    onClick={() => onSelectPage(page.id)}
+                    className={cn(
+                      'sidebar-item w-full',
+                      selectedPageId === page.id && 'active'
+                    )}
+                  >
+                    <FileCode className="w-4 h-4 text-accent" />
+                    <span className="font-medium truncate">{page.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
         {/* All Pages */}
-        <div>
-          <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Pages
-            </span>
-            <button
-              onClick={handleCreatePage}
-              className="p-0.5 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent rounded transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
+        <div className="mb-6">
+          <h3 className="px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+            Pages
+          </h3>
 
           {loading ? (
             <div className="px-2 py-4 text-sm text-muted-foreground text-center">
@@ -240,22 +247,35 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
               No pages yet
             </div>
           ) : (
-            rootPages.map((page) => renderPageItem(page))
+            <ul className="space-y-0.5">
+              {rootPages.map((page) => renderPageItem(page))}
+            </ul>
           )}
+        </div>
+
+        {/* Tags */}
+        <div>
+          <h3 className="px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+            Tags
+          </h3>
+          <div className="px-2 flex flex-wrap gap-2">
+            <span className="text-xs text-muted-foreground hover:text-secondary-foreground cursor-pointer">#bug-fix</span>
+            <span className="text-xs text-muted-foreground hover:text-secondary-foreground cursor-pointer">#rfc</span>
+            <span className="text-xs text-muted-foreground hover:text-secondary-foreground cursor-pointer">#idea</span>
+          </div>
         </div>
       </ScrollArea>
 
-      {/* New Page Button */}
+      {/* User Footer */}
       <div className="p-3 border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
-          onClick={handleCreatePage}
-        >
-          <Plus className="w-4 h-4" />
-          New page
-        </Button>
+        <button className="w-full flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground hover:text-secondary-foreground transition-colors">
+          <div className="flex items-center gap-2">
+            <div className="status-indicator status-online" />
+            <span>Online</span>
+          </div>
+          <Settings className="w-3.5 h-3.5" />
+        </button>
       </div>
-    </div>
+    </aside>
   );
 }

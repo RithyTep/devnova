@@ -15,6 +15,8 @@ import {
   GripVertical,
   Plus,
   Trash2,
+  Copy,
+  Info,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -60,9 +62,9 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
   }
 
   return (
-    <div className="block-editor py-4">
+    <div className="block-editor space-y-4 text-secondary-foreground leading-relaxed font-light">
       {blocks.length === 0 ? (
-        <div className="text-muted-foreground py-4">
+        <div className="text-muted-foreground">
           <button
             onClick={() => handleAddBlock('paragraph')}
             className="flex items-center gap-2 px-2 py-1 rounded hover:bg-secondary transition-colors"
@@ -85,15 +87,9 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
       )}
 
       {blocks.length > 0 && (
-        <div className="mt-4">
-          <button
-            onClick={() => handleAddBlock('paragraph')}
-            className="flex items-center gap-2 px-2 py-1 text-muted-foreground rounded hover:bg-secondary transition-colors opacity-0 hover:opacity-100"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="text-sm">Add a block</span>
-          </button>
-        </div>
+        <p className="text-muted-foreground italic mt-8">
+          Start typing or type '/' for commands...
+        </p>
       )}
     </div>
   );
@@ -145,6 +141,7 @@ function BlockItem({ block, onUpdate, onDelete, onAddBlockAfter, isFirst }: Bloc
     onUpdate(block.id, { checked: !block.checked });
   };
 
+  // Divider block
   if (block.type === 'divider') {
     return (
       <div className="group flex items-center gap-2 py-2">
@@ -158,6 +155,100 @@ function BlockItem({ block, onUpdate, onDelete, onAddBlockAfter, isFirst }: Bloc
     );
   }
 
+  // Code block with special styling
+  if (block.type === 'code') {
+    return (
+      <div className="group">
+        <BlockActions
+          onTypeChange={handleTypeChange}
+          onDelete={() => onDelete(block.id)}
+          onAddBlockAfter={onAddBlockAfter}
+        />
+        <div className="relative">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-accent/20 to-purple-500/20 rounded-lg blur opacity-20 group-hover:opacity-40 transition duration-500" />
+          <div className="code-block relative">
+            <div className="code-block-header">
+              <span className="text-xs text-muted-foreground font-mono">code</span>
+              <div className="flex gap-2">
+                <span className="text-xs text-muted-foreground">Typescript</span>
+                <Copy className="w-3.5 h-3.5 text-muted-foreground cursor-pointer hover:text-foreground" />
+              </div>
+            </div>
+            <pre className="p-4 overflow-x-auto">
+              <code
+                ref={contentRef}
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={handleContentChange}
+                onKeyDown={handleKeyDown}
+                className="text-sm font-mono text-secondary-foreground outline-none block min-h-[24px]"
+              />
+            </pre>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Quote block with callout styling
+  if (block.type === 'quote') {
+    return (
+      <div className="group">
+        <BlockActions
+          onTypeChange={handleTypeChange}
+          onDelete={() => onDelete(block.id)}
+          onAddBlockAfter={onAddBlockAfter}
+        />
+        <div className="callout-block callout-info">
+          <Info className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+          <div
+            ref={contentRef}
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={handleContentChange}
+            onKeyDown={handleKeyDown}
+            className="text-sm text-accent/80 leading-relaxed outline-none flex-1 min-h-[24px]"
+            data-placeholder="Quote or callout..."
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Todo block with custom checkbox
+  if (block.type === 'todo') {
+    return (
+      <div className="group flex items-start gap-3">
+        <BlockActions
+          onTypeChange={handleTypeChange}
+          onDelete={() => onDelete(block.id)}
+          onAddBlockAfter={onAddBlockAfter}
+        />
+        <div className="relative flex items-center pt-1">
+          <input
+            type="checkbox"
+            checked={block.checked || false}
+            onChange={handleCheckToggle}
+            className="custom-checkbox appearance-none w-4 h-4 border border-muted-foreground/50 rounded bg-transparent focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all hover:border-muted-foreground"
+          />
+        </div>
+        <div
+          ref={contentRef}
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={handleContentChange}
+          onKeyDown={handleKeyDown}
+          className={cn(
+            'flex-1 outline-none min-h-[28px] transition-colors',
+            block.checked ? 'text-muted-foreground line-through decoration-muted-foreground/50' : 'text-secondary-foreground group-hover:text-primary'
+          )}
+          data-placeholder="To-do item..."
+        />
+      </div>
+    );
+  }
+
+  // Default block types (paragraph, headings, lists)
   return (
     <div className="group flex items-start gap-2">
       <BlockActions
@@ -169,25 +260,10 @@ function BlockItem({ block, onUpdate, onDelete, onAddBlockAfter, isFirst }: Bloc
       <div className="flex-1 flex items-start gap-2">
         {/* Block type indicator */}
         {block.type === 'bulleted_list' && (
-          <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-foreground flex-shrink-0" />
+          <span className="mt-[10px] w-1.5 h-1.5 rounded-full bg-muted-foreground/50 flex-shrink-0" />
         )}
         {block.type === 'numbered_list' && (
           <span className="mt-[3px] text-sm text-muted-foreground flex-shrink-0">1.</span>
-        )}
-        {block.type === 'todo' && (
-          <button
-            onClick={handleCheckToggle}
-            className={cn(
-              'mt-[3px] w-4 h-4 border rounded flex-shrink-0 transition-colors',
-              block.checked ? 'bg-accent border-accent' : 'border-border hover:border-muted-foreground'
-            )}
-          >
-            {block.checked && (
-              <svg className="w-full h-full text-accent-foreground" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z" />
-              </svg>
-            )}
-          </button>
         )}
 
         {/* Content */}
@@ -199,13 +275,12 @@ function BlockItem({ block, onUpdate, onDelete, onAddBlockAfter, isFirst }: Bloc
           onKeyDown={handleKeyDown}
           className={cn(
             'flex-1 outline-none py-1 rounded transition-colors min-h-[28px]',
-            'focus:bg-secondary/30 hover:bg-secondary/20',
-            block.type === 'heading1' && 'text-3xl font-bold',
-            block.type === 'heading2' && 'text-2xl font-semibold',
-            block.type === 'heading3' && 'text-xl font-semibold',
-            block.type === 'quote' && 'border-l-4 border-border pl-4 italic text-muted-foreground',
-            block.type === 'code' && 'font-mono text-sm bg-muted px-3 py-2 rounded-md',
-            block.type === 'todo' && block.checked && 'line-through text-muted-foreground'
+            'focus:outline-none',
+            block.type === 'heading1' && 'text-3xl font-medium text-primary tracking-tight',
+            block.type === 'heading2' && 'text-2xl font-medium text-primary',
+            block.type === 'heading3' && 'text-xl font-medium text-primary',
+            block.type === 'paragraph' && 'text-secondary-foreground',
+            (block.type === 'bulleted_list' || block.type === 'numbered_list') && 'text-secondary-foreground'
           )}
           data-placeholder={getPlaceholder(block.type)}
         />
