@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { FileText, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -75,55 +75,55 @@ export default function Auth() {
       <div className="w-full max-w-md animate-fade-in">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-foreground rounded-lg flex items-center justify-center">
-            <FileText className="w-6 h-6 text-background" />
+          <div className="w-8 h-8 bg-primary rounded text-primary-foreground flex items-center justify-center text-sm font-bold tracking-tighter">
+            D
           </div>
-          <span className="text-2xl font-semibold tracking-tight">Notion Clone</span>
+          <span className="text-xl font-medium tracking-tight text-primary">DevSpace</span>
         </div>
 
         {/* Auth Card */}
-        <div className="bg-card border border-border rounded-xl p-8 shadow-sm">
-          <h1 className="text-xl font-semibold text-center mb-6">
+        <div className="bg-card border border-border rounded-xl p-8">
+          <h1 className="text-xl font-medium text-primary text-center mb-6">
             {isLogin ? 'Welcome back' : 'Create your account'}
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
+                <Label htmlFor="displayName" className="text-sm text-muted-foreground">Display Name</Label>
                 <Input
                   id="displayName"
                   type="text"
                   placeholder="Your name"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="h-11"
+                  className="h-11 bg-secondary border-border text-secondary-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                 />
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11"
+                className="h-11 bg-secondary border-border text-secondary-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm text-muted-foreground">Password</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-11"
+                className="h-11 bg-secondary border-border text-secondary-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                 required
                 minLength={6}
               />
@@ -131,7 +131,7 @@ export default function Auth() {
 
             <Button
               type="submit"
-              className="w-full h-11 font-medium"
+              className="w-full h-11 font-medium bg-accent hover:bg-accent/90 text-accent-foreground"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -148,7 +148,7 @@ export default function Auth() {
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-secondary-foreground transition-colors"
             >
               {isLogin ? "Don't have an account? " : 'Already have an account? '}
               <span className="text-accent font-medium">

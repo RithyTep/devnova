@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Page } from '@/hooks/usePages';
-import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Smile, ImageIcon, MessageSquare } from 'lucide-react';
+import { Network, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PageHeaderProps {
@@ -10,126 +9,109 @@ interface PageHeaderProps {
   onUpdatePage: (id: string, updates: Partial<Pick<Page, 'title' | 'icon' | 'cover_image'>>) => Promise<{ data: Page | null; error: Error | null }>;
 }
 
-const EMOJI_OPTIONS = ['📄', '📝', '📌', '📚', '💡', '🎯', '🚀', '✨', '🔥', '💪', '🎨', '🎵', '📊', '📈', '🗂️', '📁'];
+const STATUS_OPTIONS = [
+  { label: 'In Progress', color: 'accent' },
+  { label: 'Draft', color: 'muted' },
+  { label: 'Complete', color: 'success' },
+  { label: 'Archived', color: 'warning' },
+];
 
 export function PageHeader({ page, onUpdatePage }: PageHeaderProps) {
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(page.title);
-  const titleRef = useRef<HTMLInputElement>(null);
+  const [status, setStatus] = useState(STATUS_OPTIONS[0]);
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     setTitle(page.title);
   }, [page.title]);
 
-  useEffect(() => {
-    if (isEditingTitle && titleRef.current) {
-      titleRef.current.focus();
-      titleRef.current.select();
-    }
-  }, [isEditingTitle]);
-
-  const handleTitleSave = () => {
-    setIsEditingTitle(false);
+  const handleTitleBlur = () => {
     if (title !== page.title) {
       onUpdatePage(page.id, { title: title || 'Untitled' });
     }
   };
 
-  const handleIconChange = (emoji: string) => {
-    onUpdatePage(page.id, { icon: emoji });
+  const handleTitleInput = (e: React.FormEvent<HTMLHeadingElement>) => {
+    setTitle(e.currentTarget.textContent || '');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      titleRef.current?.blur();
+    }
   };
 
   return (
     <div className="mb-8 animate-fade-in">
-      {/* Cover Image Placeholder */}
-      {page.cover_image ? (
-        <div className="w-full h-48 bg-muted rounded-lg mb-6 overflow-hidden">
-          <img
-            src={page.cover_image}
-            alt="Cover"
-            className="w-full h-full object-cover"
-          />
-        </div>
-      ) : (
-        <div className="group relative -mx-12 mb-6">
-          <button className="w-full h-12 flex items-center justify-center gap-2 text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary/50 transition-colors opacity-0 group-hover:opacity-100">
-            <ImageIcon className="w-4 h-4" />
-            <span className="text-sm">Add cover</span>
-          </button>
-        </div>
-      )}
+      {/* Banner Image */}
+      <div className="w-full h-32 bg-gradient-to-r from-secondary via-secondary to-accent/10 rounded-xl mb-8 border border-border/50 flex items-center justify-center overflow-hidden relative group">
+        <div className="opacity-10 absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiMxMTEiLz48cmVjdCB3aWR0aD0iMiIgaGVpZ2h0PSIyIiBmaWxsPSIjMjIyIi8+PC9zdmc+')]" />
+        <Network className="w-10 h-10 text-muted-foreground/30 group-hover:scale-110 transition-transform duration-500" />
+      </div>
 
-      {/* Icon and Title */}
-      <div className="flex items-start gap-4">
-        {/* Icon Picker */}
+      {/* Document Title */}
+      <h1
+        ref={titleRef}
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={handleTitleBlur}
+        onInput={handleTitleInput}
+        onKeyDown={handleKeyDown}
+        className="text-4xl font-medium tracking-tight text-primary mb-6 focus:outline-none"
+        data-placeholder="Untitled"
+      >
+        {page.title || 'Untitled'}
+      </h1>
+
+      {/* Meta Tags */}
+      <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded border border-border bg-secondary/50 text-xs text-muted-foreground">
+          <User className="w-3 h-3" />
+          <span>Author</span>
+        </div>
+        
         <Popover>
           <PopoverTrigger asChild>
-            <button className="text-6xl hover:bg-secondary/50 rounded-lg p-2 transition-colors">
-              {page.icon || '📄'}
+            <button className={cn(
+              'flex items-center gap-1.5 px-2 py-0.5 rounded border text-xs cursor-pointer transition-colors',
+              status.color === 'accent' && 'border-accent/20 bg-accent/10 text-accent',
+              status.color === 'muted' && 'border-border bg-secondary/50 text-muted-foreground',
+              status.color === 'success' && 'border-success/20 bg-success/10 text-success',
+              status.color === 'warning' && 'border-warning/20 bg-warning/10 text-warning',
+            )}>
+              <span className={cn(
+                'w-1.5 h-1.5 rounded-full',
+                status.color === 'accent' && 'bg-accent',
+                status.color === 'muted' && 'bg-muted-foreground',
+                status.color === 'success' && 'bg-success',
+                status.color === 'warning' && 'bg-warning',
+              )} />
+              <span>{status.label}</span>
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-80">
-            <div className="grid grid-cols-8 gap-1">
-              {EMOJI_OPTIONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => handleIconChange(emoji)}
-                  className={cn(
-                    'text-2xl p-2 rounded hover:bg-secondary transition-colors',
-                    page.icon === emoji && 'bg-secondary'
-                  )}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
+          <PopoverContent align="start" className="w-40 p-1">
+            {STATUS_OPTIONS.map((option) => (
+              <button
+                key={option.label}
+                onClick={() => setStatus(option)}
+                className={cn(
+                  'w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded hover:bg-secondary transition-colors text-left',
+                  status.label === option.label && 'bg-secondary'
+                )}
+              >
+                <span className={cn(
+                  'w-1.5 h-1.5 rounded-full',
+                  option.color === 'accent' && 'bg-accent',
+                  option.color === 'muted' && 'bg-muted-foreground',
+                  option.color === 'success' && 'bg-success',
+                  option.color === 'warning' && 'bg-warning',
+                )} />
+                {option.label}
+              </button>
+            ))}
           </PopoverContent>
         </Popover>
-
-        {/* Title */}
-        <div className="flex-1 pt-2">
-          {isEditingTitle ? (
-            <input
-              ref={titleRef}
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={handleTitleSave}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleTitleSave();
-                if (e.key === 'Escape') {
-                  setTitle(page.title);
-                  setIsEditingTitle(false);
-                }
-              }}
-              className="w-full text-4xl font-bold bg-transparent outline-none border-b-2 border-accent py-1"
-              placeholder="Untitled"
-            />
-          ) : (
-            <h1
-              onClick={() => setIsEditingTitle(true)}
-              className="text-4xl font-bold cursor-text hover:bg-secondary/30 rounded px-1 -mx-1 transition-colors"
-            >
-              {page.title || 'Untitled'}
-            </h1>
-          )}
-
-          {/* Quick Actions */}
-          <div className="flex items-center gap-2 mt-3 opacity-0 hover:opacity-100 focus-within:opacity-100 transition-opacity">
-            <Button variant="ghost" size="sm" className="text-muted-foreground h-7 px-2">
-              <Smile className="w-4 h-4 mr-1" />
-              Add icon
-            </Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground h-7 px-2">
-              <ImageIcon className="w-4 h-4 mr-1" />
-              Add cover
-            </Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground h-7 px-2">
-              <MessageSquare className="w-4 h-4 mr-1" />
-              Add comment
-            </Button>
-          </div>
-        </div>
       </div>
     </div>
   );
