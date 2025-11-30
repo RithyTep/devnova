@@ -37,6 +37,10 @@ export default function Workspace() {
     }
   };
 
+  const handleSelectPage = (pageId: string) => {
+    setSelectedPageId(pageId);
+  };
+
   const selectedPage = pages.find((p) => p.id === selectedPageId);
 
   if (authLoading) {
@@ -53,11 +57,15 @@ export default function Workspace() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar selectedPageId={selectedPageId} onSelectPage={setSelectedPageId} />
-      
+      <Sidebar selectedPageId={selectedPageId} onSelectPage={handleSelectPage} />
+
       <main className="flex-1 flex flex-col">
         {selectedPage ? (
-          <PageView page={selectedPage} onUpdatePage={updatePage} />
+          <PageView
+            page={selectedPage}
+            onUpdatePage={updatePage}
+            onSelectPage={handleSelectPage}
+          />
         ) : (
           <EmptyState onCreatePage={handleCreatePage} />
         )}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePages, Page } from '@/hooks/usePages';
@@ -7,8 +7,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   FileCode,
   Plus,
@@ -22,6 +28,9 @@ import {
   Search,
   ChevronsUpDown,
   PlusCircle,
+  File,
+  FolderPlus,
+  ArrowUpRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -33,14 +42,28 @@ interface SidebarProps {
 
 export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
   const { user, signOut } = useAuth();
-  const { pages, createPage, updatePage, deletePage, loading } = usePages();
+  const { pages, rootPages, createPage, updatePage, deletePage, getChildPages, getAncestorIds, loading } = usePages();
   const navigate = useNavigate();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const favoritePages = pages.filter((p) => p.is_favorite);
-  const rootPages = pages.filter((p) => !p.parent_page_id);
 
-  const toggleExpanded = (id: string) => {
+  // Auto-expand parent pages when selecting a nested page
+  useEffect(() => {
+    if (selectedPageId) {
+      const ancestorIds = getAncestorIds(selectedPageId);
+      if (ancestorIds.length > 0) {
+        setExpandedIds((prev) => {
+          const next = new Set(prev);
+          ancestorIds.forEach((id) => next.add(id));
+          return next;
+        });
+      }
+    }
+  }, [selectedPageId, getAncestorIds]);
+
+  const toggleExpanded = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -62,7 +85,21 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
     }
   };
 
-  const handleDeletePage = async (pageId: string) => {
+  const handleCreateSubpage = async (parentId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const { data, error } = await createPage('Untitled', parentId);
+    if (error) {
+      toast.error('Failed to create subpage');
+    } else if (data) {
+      // Expand parent to show new subpage
+      setExpandedIds((prev) => new Set(prev).add(parentId));
+      onSelectPage(data.id);
+      toast.success('Subpage created');
+    }
+  };
+
+  const handleDeletePage = async (pageId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     const { error } = await deletePage(pageId);
     if (error) {
       toast.error('Failed to delete page');
@@ -77,7 +114,8 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
     }
   };
 
-  const handleToggleFavorite = async (page: Page) => {
+  const handleToggleFavorite = async (page: Page, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     const { error } = await updatePage(page.id, { is_favorite: !page.is_favorite });
     if (error) {
       toast.error('Failed to update page');
@@ -90,8 +128,6 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
     toast.success('Signed out');
   };
 
-  const getChildPages = (parentId: string) => pages.filter((p) => p.parent_page_id === parentId);
-
   const renderPageItem = (page: Page, depth: number = 0) => {
     const children = getChildPages(page.id);
     const hasChildren = children.length > 0;
@@ -102,62 +138,107 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
       <div key={page.id} className="animate-fade-in">
         <div
           className={cn(
-            'sidebar-item group',
+            'sidebar-item group relative',
             isSelected && 'active'
           )}
-          style={{ paddingLeft: `${8 + depth * 12}px` }}
+          style={{ paddingLeft: `${8 + depth * 16}px` }}
+          onClick={() => onSelectPage(page.id)}
         >
-          {hasChildren ? (
-            <button
-              onClick={() => toggleExpanded(page.id)}
-              className="p-0.5 hover:bg-sidebar-border rounded text-muted-foreground hover:text-foreground"
-            >
-              {isExpanded ? (
+          {/* Expand/Collapse toggle */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (hasChildren) {
+                toggleExpanded(page.id, e);
+              }
+            }}
+            className={cn(
+              'p-0.5 hover:bg-sidebar-border rounded text-muted-foreground hover:text-foreground transition-colors',
+              !hasChildren && 'opacity-0'
+            )}
+          >
+            {hasChildren ? (
+              isExpanded ? (
                 <ChevronDown className="w-3.5 h-3.5" />
               ) : (
                 <ChevronRight className="w-3.5 h-3.5" />
-              )}
-            </button>
-          ) : (
-            <span className="w-4" />
-          )}
-
-          <button
-            onClick={() => onSelectPage(page.id)}
-            className="flex-1 flex items-center gap-2 text-left truncate"
-          >
-            {page.is_favorite ? (
-              <FileCode className="w-4 h-4 text-accent" />
+              )
             ) : (
-              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" />
+              <ChevronRight className="w-3.5 h-3.5" />
             )}
-            <span className="truncate">{page.title}</span>
           </button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-1 opacity-0 group-hover:opacity-100 hover:bg-sidebar-border rounded transition-opacity">
-                <MoreHorizontal className="w-3.5 h-3.5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              <DropdownMenuItem onClick={() => handleToggleFavorite(page)}>
-                <Star className={cn('w-4 h-4 mr-2', page.is_favorite && 'fill-current text-warning')} />
-                {page.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleDeletePage(page.id)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Page icon and title */}
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            {page.icon ? (
+              <span className="text-sm shrink-0">{page.icon}</span>
+            ) : page.is_favorite ? (
+              <FileCode className="w-4 h-4 text-accent shrink-0" />
+            ) : hasChildren ? (
+              <File className="w-4 h-4 text-muted-foreground/70 shrink-0" />
+            ) : (
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 shrink-0" />
+            )}
+            <span className="truncate text-sm">{page.title || 'Untitled'}</span>
+          </div>
+
+          {/* Hover actions */}
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Quick add subpage button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => handleCreateSubpage(page.id, e)}
+                  className="p-1 hover:bg-sidebar-border rounded text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Add subpage
+              </TooltipContent>
+            </Tooltip>
+
+            {/* More options dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1 hover:bg-sidebar-border rounded text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <MoreHorizontal className="w-3.5 h-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-52">
+                <DropdownMenuItem onClick={(e) => handleCreateSubpage(page.id)}>
+                  <FolderPlus className="w-4 h-4 mr-2" />
+                  Add subpage
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleToggleFavorite(page)}>
+                  <Star className={cn('w-4 h-4 mr-2', page.is_favorite && 'fill-current text-warning')} />
+                  {page.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={(e) => handleDeletePage(page.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
+        {/* Children (nested pages) */}
         {hasChildren && isExpanded && (
-          <div className="ml-2 border-l border-sidebar-border">
+          <div className="relative">
+            {/* Tree line */}
+            <div 
+              className="absolute left-0 top-0 bottom-0 border-l border-sidebar-border"
+              style={{ marginLeft: `${14 + depth * 16}px` }}
+            />
             {children.map((child) => renderPageItem(child, depth + 1))}
           </div>
         )}
@@ -223,7 +304,11 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
                       selectedPageId === page.id && 'active'
                     )}
                   >
-                    <FileCode className="w-4 h-4 text-accent" />
+                    {page.icon ? (
+                      <span className="text-sm">{page.icon}</span>
+                    ) : (
+                      <FileCode className="w-4 h-4 text-accent" />
+                    )}
                     <span className="font-medium truncate">{page.title}</span>
                   </button>
                 </li>
@@ -232,7 +317,7 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
           </div>
         )}
 
-        {/* All Pages */}
+        {/* All Pages (Tree View) */}
         <div className="mb-6">
           <h3 className="px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
             Pages
@@ -247,9 +332,9 @@ export function Sidebar({ selectedPageId, onSelectPage }: SidebarProps) {
               No pages yet
             </div>
           ) : (
-            <ul className="space-y-0.5">
+            <div className="space-y-0.5">
               {rootPages.map((page) => renderPageItem(page))}
-            </ul>
+            </div>
           )}
         </div>
 
