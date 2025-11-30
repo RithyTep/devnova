@@ -1,24 +1,34 @@
-import { Page } from '@/hooks/usePages';
+import { Page, usePages } from '@/hooks/usePages';
 import { PageHeader } from '@/components/editor/PageHeader';
 import { BlockEditor } from '@/components/editor/BlockEditor';
+import { Breadcrumbs } from '@/components/workspace/Breadcrumbs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PanelLeft, Share, MoreHorizontal, GitBranch } from 'lucide-react';
+import { PanelLeft, Share, MoreHorizontal, GitBranch, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { toast } from 'sonner';
 
 interface PageViewProps {
   page: Page;
   onUpdatePage: (id: string, updates: Partial<Pick<Page, 'title' | 'icon' | 'cover_image'>>) => Promise<{ data: Page | null; error: Error | null }>;
+  onSelectPage: (pageId: string) => void;
 }
 
-export function PageView({ page, onUpdatePage }: PageViewProps) {
+export function PageView({ page, onUpdatePage, onSelectPage }: PageViewProps) {
+  const { getAncestors, createPage } = usePages();
   const [lastEdited, setLastEdited] = useState<string>('Just now');
+  const ancestors = getAncestors(page.id);
 
   useEffect(() => {
     const updateTime = new Date(page.updated_at);
     const now = new Date();
     const diffMs = now.getTime() - updateTime.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) {
       setLastEdited('Just now');
     } else if (diffMins < 60) {
@@ -29,19 +39,44 @@ export function PageView({ page, onUpdatePage }: PageViewProps) {
     }
   }, [page.updated_at]);
 
+  const handleCreateSubpage = async () => {
+    const { data, error } = await createPage('Untitled', page.id);
+    if (error) {
+      toast.error('Failed to create subpage');
+    } else if (data) {
+      onSelectPage(data.id);
+      toast.success('Subpage created');
+    }
+  };
+
   return (
     <main className="flex-1 flex flex-col h-full bg-background relative">
-      {/* Header */}
+      {/* Header with Breadcrumbs */}
       <header className="h-14 border-b border-border/40 flex items-center justify-between px-6 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <PanelLeft className="w-4 h-4 mr-2 cursor-pointer md:hidden hover:text-foreground transition-colors" />
-          <span className="hover:text-secondary-foreground cursor-pointer transition-colors">Pages</span>
-          <span className="text-border">/</span>
-          <span className="text-secondary-foreground font-medium">{page.title || 'Untitled'}</span>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <PanelLeft className="w-4 h-4 mr-2 text-muted-foreground cursor-pointer md:hidden hover:text-foreground transition-colors shrink-0" />
+          <Breadcrumbs
+            ancestors={ancestors}
+            currentPage={page}
+            onNavigate={onSelectPage}
+          />
         </div>
-        
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground mr-2">Edited {lastEdited}</span>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-muted-foreground mr-2 hidden sm:inline">
+            Edited {lastEdited}
+          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleCreateSubpage}
+                className="text-muted-foreground hover:text-foreground transition-colors p-1.5 hover:bg-secondary rounded"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Add subpage</TooltipContent>
+          </Tooltip>
           <button className="text-muted-foreground hover:text-foreground transition-colors p-1.5 hover:bg-secondary rounded">
             <Share className="w-4 h-4" />
           </button>
