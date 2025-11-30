@@ -117,7 +117,7 @@
 
   /* Block editor styles */
   .block-editor {
-    @apply w-full;
+    @apply w-full pl-16;
   }
 
   .block-content {
@@ -141,15 +141,15 @@
 
   /* Code block syntax highlighting */
   .code-block {
-    @apply relative bg-secondary rounded-lg border border-border overflow-hidden;
+    @apply relative bg-secondary/50 rounded-lg border border-border/50 overflow-hidden;
   }
 
   .code-block-header {
-    @apply flex items-center justify-between px-4 py-2 bg-secondary border-b border-border;
+    @apply flex items-center justify-between px-4 py-2 bg-secondary/80 border-b border-border/50;
   }
 
   .code-block pre {
-    @apply p-4 overflow-x-auto text-sm font-mono;
+    @apply p-4 overflow-x-auto text-sm font-mono bg-transparent;
   }
 
   /* Callout block */
@@ -186,6 +186,17 @@
   /* Keyboard shortcut badge */
   .kbd-badge {
     @apply text-xs bg-secondary border border-border px-1.5 py-0.5 rounded text-muted-foreground;
+  }
+
+  /* Empty content placeholder via CSS */
+  [contenteditable]:empty:before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground) / 0.4);
+    pointer-events: none;
+  }
+
+  [contenteditable]:focus:empty:before {
+    color: hsl(var(--muted-foreground) / 0.5);
   }
 }
 
